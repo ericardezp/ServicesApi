@@ -1,4 +1,5 @@
-﻿namespace ServicesApi.Validations
+﻿#nullable enable
+namespace ServicesApi.Validations
 {
     using System.ComponentModel.DataAnnotations;
 
@@ -11,13 +12,8 @@
                 return ValidationResult.Success;
             }
 
-            var firstLetter = value.ToString()[0].ToString();
-            if (firstLetter != firstLetter.ToUpper())
-            {
-                return new ValidationResult("La primera letra debe ser mayúscula");
-            }
-
-            return ValidationResult.Success;
+            var firstLetter = value.ToString()?[0].ToString();
+            return firstLetter != firstLetter?.ToUpper() ? new ValidationResult("La primera letra debe ser mayúscula") : ValidationResult.Success;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿namespace ServicesApi.Repositories
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -10,5 +11,9 @@
         List<Genre> GetCatalogGenres();
 
         Task<Genre> GetGenreById(int id);
+
+        Guid GetGuidValue();
+
+        void AddGenre(Genre model);
     }
 }

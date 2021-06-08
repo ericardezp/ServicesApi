@@ -11,6 +11,8 @@
     {
         private List<Genre> _genres;
 
+        private Guid GuidValue;
+
         public MemoryRepository()
         {
             this._genres = new List<Genre>
@@ -21,6 +23,8 @@
                                    new() { Id = 4, GenreName = "Terror" },
                                    new() { Id = 5, GenreName = "Suspenso" }
                                };
+
+            this.GuidValue = Guid.NewGuid();
         }
 
         public List<Genre> GetCatalogGenres()
@@ -30,8 +34,19 @@
 
         public async Task<Genre> GetGenreById(int id)
         {
-            await Task.Delay(TimeSpan.FromSeconds(3));
+            await Task.Delay(TimeSpan.FromSeconds(1));
             return this._genres.FirstOrDefault(x => x.Id == id);
+        }
+
+        public Guid GetGuidValue()
+        {
+            return this.GuidValue;
+        }
+
+        public void AddGenre(Genre model)
+        {
+            model.Id = this._genres.Count + 1;
+            this._genres.Add(model);
         }
     }
 }

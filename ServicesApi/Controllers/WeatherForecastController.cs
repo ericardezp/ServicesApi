@@ -24,9 +24,12 @@ namespace ServicesApi.Controllers
 
         private readonly ILogger<WeatherForecastController> _logger;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        private readonly IRepository repository;
+
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IRepository repository)
         {
             _logger = logger;
+            this.repository = repository;
         }
 
         [HttpGet]
@@ -53,6 +56,12 @@ namespace ServicesApi.Controllers
                                  TemperatureC = rng.Next(-20, 55),
                                  Summary = Summaries[rng.Next(Summaries.Length)]
                              }).ToArray();
+        }
+
+        [HttpGet("guid")]
+        public Guid GetGuidValueWeatherForecastController()
+        {
+            return this.repository.GetGuidValue();
         }
     }
 }
