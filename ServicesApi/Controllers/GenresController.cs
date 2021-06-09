@@ -5,6 +5,7 @@
     using System.Threading.Tasks;
 
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
 
     using ServicesApi.Models.Entities;
@@ -15,22 +16,19 @@
     {
         private readonly ILogger<Genre> logger;
 
-        public GenresController(ILogger<Genre> logger)
+        private readonly ApplicationDbContext context;
+
+        public GenresController(ILogger<Genre> logger, ApplicationDbContext context)
         {
             this.logger = logger;
+            this.context = context;
         }
 
         [HttpGet]
-        public ActionResult<List<Genre>> Get()
+        public async Task<ActionResult<List<Genre>>> Get()
         {
-            return new List<Genre>
-                               {
-                                   new() { Id = 1, GenreName = "Drama" },
-                                   new() { Id = 2, GenreName = "Acción" },
-                                   new() { Id = 3, GenreName = "Comedia" },
-                                   new() { Id = 4, GenreName = "Terror" },
-                                   new() { Id = 5, GenreName = "Suspenso" }
-                               };
+            var genres = await this.context.Genres.ToListAsync();
+            return this.Ok(genres);
         }
 
         [HttpGet("{id:int}")]
@@ -40,9 +38,11 @@
         }
 
         [HttpPost]
-        public ActionResult Post([FromBody] Genre model)
+        public async Task<ActionResult> Post([FromBody] Genre model)
         {
-            throw new NotImplementedException();
+            this.context.Add(model);
+            await this.context.SaveChangesAsync();
+            return this.NoContent();
         }
 
         [HttpPut]

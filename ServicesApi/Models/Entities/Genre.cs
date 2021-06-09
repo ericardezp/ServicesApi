@@ -10,7 +10,7 @@
         public int Id { get; set; }
 
         [Required]
-        [StringLength(50)]
+        [StringLength(10)]
         [FirstLetterUppercase]
         public string GenreName { get; set; }
     }
