@@ -1,16 +1,13 @@
-﻿namespace ServicesApi.Models.Entities
+﻿namespace ServicesApi.DTOs
 {
-    using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
 
     using ServicesApi.Validations;
 
-    public class Genre
+    public class AddGenreDto
     {
-        public int Id { get; set; }
-
         [Required]
-        [StringLength(50)]
+        [StringLength(10)]
         [FirstLetterUppercase]
         public string GenreName { get; set; }
     }

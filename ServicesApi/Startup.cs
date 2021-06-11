@@ -10,6 +10,7 @@ namespace ServicesApi
     using Microsoft.OpenApi.Models;
 
     using ServicesApi.Filters;
+    using ServicesApi.Utilities;
 
     public class Startup
     {
@@ -23,6 +24,8 @@ namespace ServicesApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddAutoMapper(typeof(Startup));
+            services.AddTransient<IApplicationAzureStorage, ApplicationAzureStorage>();
             services.AddDbContext<ApplicationDbContext>(
                 options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
@@ -33,7 +36,11 @@ namespace ServicesApi
                         options.AddDefaultPolicy(
                             builder =>
                                 {
-                                    builder.WithOrigins(allowOrigins).AllowAnyMethod().AllowAnyHeader();
+                                    builder
+                                        .WithOrigins(allowOrigins)
+                                        .AllowAnyMethod()
+                                        .AllowAnyHeader()
+                                        .WithExposedHeaders(new string[] { "totalRecords" });
                                 });
                     });
             services.AddControllers(

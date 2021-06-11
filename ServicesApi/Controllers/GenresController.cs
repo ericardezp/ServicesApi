@@ -2,14 +2,19 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
+
+    using AutoMapper;
 
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
 
+    using ServicesApi.DTOs;
     using ServicesApi.Models.Entities;
-    
+    using ServicesApi.Utilities;
+
     [Route("api/genres")]
     [ApiController]
     public class GenresController : ControllerBase
@@ -18,43 +23,71 @@
 
         private readonly ApplicationDbContext context;
 
-        public GenresController(ILogger<Genre> logger, ApplicationDbContext context)
+        private readonly IMapper mapper;
+
+        public GenresController(ILogger<Genre> logger, ApplicationDbContext context, IMapper mapper)
         {
             this.logger = logger;
             this.context = context;
+            this.mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Genre>>> Get()
+        public async Task<ActionResult<List<GenreDto>>> Get([FromQuery] PaginationDto paginationDto)
         {
-            var genres = await this.context.Genres.ToListAsync();
-            return this.Ok(genres);
+            var queryable = this.context.Genres.AsQueryable();
+            await this.HttpContext.AddParametersHeader(queryable);
+            var genres = queryable.OrderBy(x => x.GenreName).Paginate(paginationDto);
+            return this.Ok(this.mapper.Map<List<GenreDto>>(await genres.ToListAsync()));
         }
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        public async Task<ActionResult<GenreDto>> Get(int id)
         {
-            throw new NotImplementedException();
+            var foundGenre = await this.context.Genres.FirstOrDefaultAsync(x => x.Id == id);
+            if (foundGenre == null)
+            {
+                return this.NotFound();
+            }
+
+            return this.mapper.Map<GenreDto>(foundGenre);
         }
 
         [HttpPost]
-        public async Task<ActionResult> Post([FromBody] Genre model)
+        public async Task<ActionResult> Post([FromBody] AddGenreDto addGenreDto)
         {
-            this.context.Add(model);
+            var genreModel = this.mapper.Map<Genre>(addGenreDto);
+            this.context.Add(genreModel);
             await this.context.SaveChangesAsync();
             return this.NoContent();
         }
 
-        [HttpPut]
-        public ActionResult Put([FromBody] Genre model)
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult> Put(int id, [FromBody] AddGenreDto addGenreDto)
         {
-            throw new NotImplementedException();
+            var foundGenre = await this.context.Genres.FirstOrDefaultAsync(x => x.Id == id);
+            if (foundGenre == null)
+            {
+                return this.NotFound();
+            }
+
+            foundGenre = this.mapper.Map(addGenreDto, foundGenre);
+            await this.context.SaveChangesAsync();
+            return this.NoContent();
         }
 
-        [HttpDelete]
-        public ActionResult Delete()
+        [HttpDelete("{id:int}")]
+        public async Task<ActionResult> Delete(int id)
         {
-            throw new NotImplementedException();
+            var existsGenre = await this.context.Genres.AnyAsync(x => x.Id == id);
+            if (!existsGenre)
+            {
+                return this.NotFound();
+            }
+
+            this.context.Remove(new Genre { Id = id });
+            await this.context.SaveChangesAsync();
+            return this.NoContent();
         }
     }
 }
