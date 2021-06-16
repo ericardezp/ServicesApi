@@ -50,7 +50,7 @@
                 return this.NotFound();
             }
 
-            return this.mapper.Map<GenreDto>(foundGenre);
+            return this.Ok(this.mapper.Map<GenreDto>(foundGenre));
         }
 
         [HttpPost]

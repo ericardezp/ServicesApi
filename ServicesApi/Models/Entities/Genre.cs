@@ -13,5 +13,7 @@
         [StringLength(50)]
         [FirstLetterUppercase]
         public string GenreName { get; set; }
+
+        public List<MovieGenre> MoviesGenres { get; set; }
     }
 }

@@ -7,7 +7,7 @@
     public class AddGenreDto
     {
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         [FirstLetterUppercase]
         public string GenreName { get; set; }
     }

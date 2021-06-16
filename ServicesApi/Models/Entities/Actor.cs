@@ -1,6 +1,7 @@
 ﻿namespace ServicesApi.Models.Entities
 {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
 
     public class Actor
@@ -16,5 +17,7 @@
         public DateTime DateBirth { get; set; }
 
         public string Photo { get; set; }
+
+        public List<MovieActor> MoviesActors { get; set; }
     }
 }

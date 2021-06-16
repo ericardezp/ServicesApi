@@ -1,5 +1,7 @@
 namespace ServicesApi
 {
+    using AutoMapper;
+
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
@@ -8,6 +10,9 @@ namespace ServicesApi
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.OpenApi.Models;
+
+    using NetTopologySuite;
+    using NetTopologySuite.Geometries;
 
     using ServicesApi.Filters;
     using ServicesApi.Utilities;
@@ -25,9 +30,21 @@ namespace ServicesApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddAutoMapper(typeof(Startup));
+            services.AddSingleton(provider =>
+                        new MapperConfiguration(config =>
+                                {
+                                    var geometryFactory = provider.GetRequiredService<GeometryFactory>();
+                                    config.AddProfile(new AutoMapperProfiles(geometryFactory));
+                                }).CreateMapper());
+            services.AddSingleton<GeometryFactory>(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
+
             services.AddTransient<IApplicationAzureStorage, ApplicationAzureStorage>();
+
+            services.AddHttpContextAccessor();
             services.AddDbContext<ApplicationDbContext>(
-                options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+                options => options.UseSqlServer(
+                    this.Configuration.GetConnectionString("DefaultConnection"),
+                    sqlServer => sqlServer.UseNetTopologySuite()));
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
             services.AddCors(
                 options =>
@@ -66,6 +83,8 @@ namespace ServicesApi
             }
 
             app.UseHttpsRedirection();
+
+            app.UseStaticFiles();
 
             app.UseRouting();
 
