@@ -46,10 +46,12 @@ namespace ServicesApi.Controllers
             var moviesTheaters = await this.context.Movies.Where(x => x.MoviesTheaters).OrderBy(x => x.ReleaseDate)
                                      .Take(top).ToListAsync();
 
-            var landingPageDto = new LandingPageDto();
-            landingPageDto.ComingSoon = this.mapper.Map<List<MovieDto>>(comingSoon);
-            landingPageDto.MoviesTheaters = this.mapper.Map<List<MovieDto>>(moviesTheaters);
-            return this.Ok(landingPageDto);
+            var landingPageDto = new LandingPageDto
+            {
+                ComingSoon = this.mapper.Map<List<MovieDto>>(comingSoon),
+                MoviesTheaters = this.mapper.Map<List<MovieDto>>(moviesTheaters)
+            };
+            return landingPageDto;
         }
 
         [HttpGet("{id:int}")]
@@ -65,7 +67,69 @@ namespace ServicesApi.Controllers
 
             var movieDto = this.mapper.Map<MovieDto>(movie);
             movieDto.Actors = movieDto.Actors.OrderBy(x => x.Order).ToList();
-            return this.Ok(movieDto);
+            return movieDto;
+        }
+
+        [HttpGet("filter")]
+        public async Task<ActionResult<List<MovieDto>>> Filter([FromQuery] MovieFilterDto movieFilterDto)
+        {
+            var moviesQueryable = this.context.Movies.AsQueryable();
+            if (!string.IsNullOrEmpty(movieFilterDto.Title))
+            {
+                moviesQueryable = moviesQueryable.Where(x => x.Title.Contains(movieFilterDto.Title));
+            }
+
+            if (movieFilterDto.IsMovieShowing)
+            {
+                moviesQueryable = moviesQueryable.Where(x => x.MoviesTheaters);
+            }
+
+            if (movieFilterDto.IsMovieComingSoon)
+            {
+                var today = DateTime.Today;
+                moviesQueryable = moviesQueryable.Where(x => x.ReleaseDate > today);
+            }
+
+            if (movieFilterDto.GenreId != 0)
+            {
+                moviesQueryable = moviesQueryable.Where(
+                    x => x.MoviesGenres.Select(y => y.GenreId).Contains(movieFilterDto.GenreId));
+            }
+
+            await this.HttpContext.AddParametersHeader(moviesQueryable);
+            var movies = await moviesQueryable.Paginate(movieFilterDto.PaginationDto).ToListAsync();
+            return this.mapper.Map<List<MovieDto>>(movies);
+        }
+
+        [HttpGet("MovieDetail/{id:int}")]
+        public async Task<ActionResult<MovieDetailDto>> GetMovieDetail(int id)
+        {
+            var foundMovie = await this.Get(id);
+            if (foundMovie.Result is NotFoundResult)
+            {
+                return this.NotFound();
+            }
+
+            var movie = foundMovie.Value;
+            var selectedGenresIds = movie.Genres.Select(x => x.Id).ToList();
+            var unselectedGenresIds =
+                await this.context.Genres.Where(x => !selectedGenresIds.Contains(x.Id)).ToListAsync();
+            var selectedCinemasIds = movie.Cinemas.Select(x => x.Id).ToList();
+            var unselectedCinemasIds =
+                await this.context.Cinemas.Where(x => !selectedCinemasIds.Contains(x.Id)).ToListAsync();
+
+            var unselectedGenresDto = this.mapper.Map<List<GenreDto>>(unselectedGenresIds);
+            var unselectedCinemasDto = this.mapper.Map<List<CinemaDto>>(unselectedCinemasIds);
+
+            return new MovieDetailDto
+            {
+                Movie = movie,
+                SelectedGenres = movie.Genres,
+                UnselectedGenres = unselectedGenresDto,
+                SelectedCinemas = movie.Cinemas,
+                UnselectedCinemas = unselectedCinemasDto,
+                Actors = movie.Actors
+            };
         }
 
         [HttpGet("catalogs")]
@@ -76,11 +140,11 @@ namespace ServicesApi.Controllers
             var cinemasDto = this.mapper.Map<List<CinemaDto>>(cinemas);
             var genresDto = this.mapper.Map<List<GenreDto>>(genres);
 
-            return this.Ok(new MovieCinemaGenreDto { Cinemas = cinemasDto, Genres = genresDto });
+            return new MovieCinemaGenreDto { Cinemas = cinemasDto, Genres = genresDto };
         }
 
         [HttpPost]
-        public async Task<ActionResult> Post([FromForm] AddMovieDto addMovieDto)
+        public async Task<ActionResult<int>> Post([FromForm] AddMovieDto addMovieDto)
         {
             var movie = this.mapper.Map<Movie>(addMovieDto);
             if (addMovieDto.Poster != null)
@@ -91,6 +155,48 @@ namespace ServicesApi.Controllers
             SetOrderActor(movie);
             this.context.Add(movie);
             await this.context.SaveChangesAsync();
+            return movie.Id;
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult> Put(int id, [FromForm] AddMovieDto addMovieDto)
+        {
+            var movie = await this.context.Movies
+                            .Include(x => x.MoviesActors)
+                            .Include(x => x.MoviesGenres)
+                            .Include(x => x.MoviesCinemas)
+                            .FirstOrDefaultAsync(x => x.Id == id);
+            if (movie == null)
+            {
+                return this.NotFound();
+            }
+
+            movie = this.mapper.Map(addMovieDto, movie);
+            if (addMovieDto.Poster != null)
+            {
+                movie.Poster = await this.applicationAzureStorage.EditFile(
+                                   this.container,
+                                   addMovieDto.Poster,
+                                   movie.Poster);
+            }
+
+            SetOrderActor(movie);
+            await this.context.SaveChangesAsync();
+            return this.NoContent();
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<ActionResult> Delete(int id)
+        {
+            var foundMovie = await this.context.Movies.FirstOrDefaultAsync(x => x.Id == id);
+            if (foundMovie == null)
+            {
+                return this.NotFound();
+            }
+
+            this.context.Remove(foundMovie);
+            await this.context.SaveChangesAsync();
+            await this.applicationAzureStorage.DeleteFile(foundMovie.Poster, this.container);
             return this.NoContent();
 
         }

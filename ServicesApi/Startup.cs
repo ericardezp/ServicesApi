@@ -1,14 +1,19 @@
 namespace ServicesApi
 {
+    using System;
+    using System.Text;
+
     using AutoMapper;
 
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Identity;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.IdentityModel.Tokens;
     using Microsoft.OpenApi.Models;
 
     using NetTopologySuite;
@@ -36,8 +41,9 @@ namespace ServicesApi
                                     var geometryFactory = provider.GetRequiredService<GeometryFactory>();
                                     config.AddProfile(new AutoMapperProfiles(geometryFactory));
                                 }).CreateMapper());
-            services.AddSingleton<GeometryFactory>(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
 
+            services.AddSingleton<GeometryFactory>(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
+            services.AddTransient<ITokenGenerator, TokenGenerator>();
             services.AddTransient<IApplicationAzureStorage, ApplicationAzureStorage>();
 
             services.AddHttpContextAccessor();
@@ -45,11 +51,10 @@ namespace ServicesApi
                 options => options.UseSqlServer(
                     this.Configuration.GetConnectionString("DefaultConnection"),
                     sqlServer => sqlServer.UseNetTopologySuite()));
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
             services.AddCors(
                 options =>
                     {
-                        var allowOrigins = Configuration.GetValue<string>("AllowOrigins");
+                        var allowOrigins = this.Configuration.GetValue<string>("AllowOrigins");
                         options.AddDefaultPolicy(
                             builder =>
                                 {
@@ -60,6 +65,23 @@ namespace ServicesApi
                                         .WithExposedHeaders(new string[] { "totalRecords" });
                                 });
                     });
+
+            services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options => 
+                    options.TokenValidationParameters = new TokenValidationParameters
+                                                        {
+                                                            ValidateIssuer = false,
+                                                            ValidateAudience = false,
+                                                            ValidateLifetime = true,
+                                                            ValidateIssuerSigningKey = true,
+                                                            IssuerSigningKey = new SymmetricSecurityKey(
+                                                                Encoding.UTF8.GetBytes(this.Configuration.GetValue<string>("JWT_SECRET_KEY"))),
+                                                            ClockSkew = TimeSpan.Zero
+                                                        });
+
             services.AddControllers(
                 options =>
                     {

@@ -33,7 +33,14 @@
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<GenreDto>>> Get([FromQuery] PaginationDto paginationDto)
+        public async Task<ActionResult<List<GenreDto>>> Get()
+        {
+            var genresCatalog = await this.context.Genres.ToListAsync();
+            return this.mapper.Map<List<GenreDto>>(genresCatalog);
+        }
+
+        [HttpGet("GetPaginate")]
+        public async Task<ActionResult<List<GenreDto>>> GetPaginate([FromQuery] PaginationDto paginationDto)
         {
             var queryable = this.context.Genres.AsQueryable();
             await this.HttpContext.AddParametersHeader(queryable);
