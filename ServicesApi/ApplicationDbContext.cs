@@ -33,5 +33,7 @@
         public DbSet<MovieCinema> MoviesCinemas { get; set; }
 
         public DbSet<MovieGenre> MoviesGenres { get; set; }
+
+        public DbSet<Rating> Ratings { get; set; }
     }
 }

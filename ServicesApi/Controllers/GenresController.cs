@@ -7,6 +7,8 @@
 
     using AutoMapper;
 
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Logging;
@@ -17,6 +19,7 @@
 
     [Route("api/genres")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdministrator")]
     public class GenresController : ControllerBase
     {
         private readonly ILogger<Genre> logger;
@@ -33,6 +36,7 @@
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<List<GenreDto>>> Get()
         {
             var genresCatalog = await this.context.Genres.ToListAsync();

@@ -1,6 +1,7 @@
 namespace ServicesApi
 {
     using System;
+    using System.IdentityModel.Tokens.Jwt;
     using System.Text;
 
     using AutoMapper;
@@ -26,6 +27,7 @@ namespace ServicesApi
     {
         public Startup(IConfiguration configuration)
         {
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
             Configuration = configuration;
         }
 
@@ -70,17 +72,21 @@ namespace ServicesApi
                 .AddDefaultTokenProviders();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options => 
+                .AddJwtBearer(options =>
                     options.TokenValidationParameters = new TokenValidationParameters
-                                                        {
-                                                            ValidateIssuer = false,
-                                                            ValidateAudience = false,
-                                                            ValidateLifetime = true,
-                                                            ValidateIssuerSigningKey = true,
-                                                            IssuerSigningKey = new SymmetricSecurityKey(
-                                                                Encoding.UTF8.GetBytes(this.Configuration.GetValue<string>("JWT_SECRET_KEY"))),
-                                                            ClockSkew = TimeSpan.Zero
-                                                        });
+                    {
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.Configuration.GetValue<string>("JWT_SECRET_KEY"))),
+                        ClockSkew = TimeSpan.Zero
+                    });
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("IsAdministrator", policy => policy.RequireClaim("role", "Administrator"));
+            });
 
             services.AddControllers(
                 options =>

@@ -19,6 +19,10 @@
 
         public string Poster { get; set; }
 
+        public byte UserScore { get; set; }
+
+        public double AverageScore { get; set; }
+
         public List<GenreDto> Genres { get; set; }
 
         public List<MovieActorDto> Actors { get; set; }

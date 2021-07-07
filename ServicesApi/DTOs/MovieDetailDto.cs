@@ -1,8 +1,6 @@
-﻿namespace ServicesApi.Controllers
+﻿namespace ServicesApi.DTOs
 {
     using System.Collections.Generic;
-
-    using ServicesApi.DTOs;
 
     public class MovieDetailDto
     {

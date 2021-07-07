@@ -5,6 +5,8 @@
 
     using AutoMapper;
 
+    using Microsoft.AspNetCore.Identity;
+
     using NetTopologySuite.Geometries;
 
     using ServicesApi.DTOs;
@@ -38,6 +40,8 @@
                 .ForMember(x => x.Genres, options => options.MapFrom(this.MapperMoviesGenres))
                 .ForMember(x => x.Actors, options => options.MapFrom(this.MapperMoviesActors))
                 .ForMember(x => x.Cinemas, options => options.MapFrom(this.MapperMoviesCinemas));
+
+            this.CreateMap<IdentityUser, UserDto>();
         }
 
         private List<CinemaDto> MapperMoviesCinemas(Movie movie, MovieDto movieDto)

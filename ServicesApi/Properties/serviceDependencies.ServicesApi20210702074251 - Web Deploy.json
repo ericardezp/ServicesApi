@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "mssql1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/moviesapidbdbserver/databases/MoviesApiDB",
+      "type": "mssql.azure",
+      "connectionId": "DefaultConnection",
+      "secretStore": "AzureAppSettings"
+    },
+    "storage1": {
+      "type": "storage",
+      "connectionId": "ConnectionStrings:AzureStorage",
+      "suggestion": "true",
+      "ignored": "true"
+    },
+    "identityapp1": {
+      "type": "identityapp",
+      "connectionId": "",
+      "suggestion": "true",
+      "ignored": "true"
+    }
+  }
+}

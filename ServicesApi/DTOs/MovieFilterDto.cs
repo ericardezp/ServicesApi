@@ -12,8 +12,8 @@
 
         public int GenreId { get; set; }
 
-        public bool IsMovieShowing { get; set; }
+        public bool MoviesTheaters { get; set; }
 
-        public bool IsMovieComingSoon { get; set; }
+        public bool ComingSoon { get; set; }
     }
 }

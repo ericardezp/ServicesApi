@@ -6,6 +6,8 @@
 
     using AutoMapper;
 
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +17,8 @@
 
     [Route("api/actors")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdministrator")]
+
     public class ActorsController : ControllerBase
     {
         private readonly ApplicationDbContext context;

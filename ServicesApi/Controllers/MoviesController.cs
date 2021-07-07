@@ -1,14 +1,16 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace ServicesApi.Controllers
+﻿namespace ServicesApi.Controllers
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+
     using AutoMapper;
 
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Identity;
+    using Microsoft.AspNetCore.Mvc;
     using Microsoft.EntityFrameworkCore;
 
     using ServicesApi.DTOs;
@@ -17,6 +19,7 @@ namespace ServicesApi.Controllers
 
     [Route("api/movies")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdministrator")]
     public class MoviesController : ControllerBase
     {
         private readonly ApplicationDbContext context;
@@ -25,17 +28,21 @@ namespace ServicesApi.Controllers
 
         private readonly IApplicationAzureStorage applicationAzureStorage;
 
+        private readonly UserManager<IdentityUser> userManager;
+
         private readonly string container = "actors";
 
 
-        public MoviesController(ApplicationDbContext context, IMapper mapper, IApplicationAzureStorage applicationAzureStorage)
+        public MoviesController(ApplicationDbContext context, IMapper mapper, IApplicationAzureStorage applicationAzureStorage, UserManager<IdentityUser> userManager)
         {
             this.context = context;
             this.mapper = mapper;
             this.applicationAzureStorage = applicationAzureStorage;
+            this.userManager = userManager;
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<LandingPageDto>> Get()
         {
             var top = 5;
@@ -55,6 +62,7 @@ namespace ServicesApi.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [AllowAnonymous]
         public async Task<ActionResult<MovieDto>> Get(int id)
         {
             var movie = await this.context.Movies.Include(x => x.MoviesGenres).ThenInclude(x => x.Genre)
@@ -65,12 +73,29 @@ namespace ServicesApi.Controllers
                 return this.NotFound();
             }
 
+            var averageScore = 0.0;
+            byte userScore = 0;
+            if (await this.context.Ratings.AnyAsync(x => x.MovieId == id) && this.HttpContext.User.Identity.IsAuthenticated)
+            {
+                averageScore = await this.context.Ratings.Where(x => x.MovieId == id).AverageAsync(x => x.Score);
+                var userEmail = this.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "email")?.Value;
+                var user = await this.userManager.FindByEmailAsync(userEmail);
+                var scoreDb = await this.context.Ratings.FirstOrDefaultAsync(x => x.UserId == user.Id && x.MovieId == id);
+                if (scoreDb != null)
+                {
+                    userScore = scoreDb.Score;
+                }
+            }
+
             var movieDto = this.mapper.Map<MovieDto>(movie);
+            movieDto.UserScore = userScore;
+            movieDto.AverageScore = averageScore;
             movieDto.Actors = movieDto.Actors.OrderBy(x => x.Order).ToList();
             return movieDto;
         }
 
         [HttpGet("filter")]
+        [AllowAnonymous]
         public async Task<ActionResult<List<MovieDto>>> Filter([FromQuery] MovieFilterDto movieFilterDto)
         {
             var moviesQueryable = this.context.Movies.AsQueryable();
@@ -79,12 +104,12 @@ namespace ServicesApi.Controllers
                 moviesQueryable = moviesQueryable.Where(x => x.Title.Contains(movieFilterDto.Title));
             }
 
-            if (movieFilterDto.IsMovieShowing)
+            if (movieFilterDto.MoviesTheaters)
             {
                 moviesQueryable = moviesQueryable.Where(x => x.MoviesTheaters);
             }
 
-            if (movieFilterDto.IsMovieComingSoon)
+            if (movieFilterDto.ComingSoon)
             {
                 var today = DateTime.Today;
                 moviesQueryable = moviesQueryable.Where(x => x.ReleaseDate > today);

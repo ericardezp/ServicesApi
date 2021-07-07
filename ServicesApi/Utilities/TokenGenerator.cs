@@ -26,7 +26,7 @@
         }
         public async Task<ResponseAuthentication> GenerateJwt(UserData userData)
         {
-            var claims = new List<Claim> { new Claim(ClaimTypes.Email, userData.Email) };
+            var claims = new List<Claim> { new Claim("email", userData.Email) };
             var identityUser = await this.userManager.FindByEmailAsync(userData.Email);
             var claimsDb = await this.userManager.GetClaimsAsync(identityUser);
             claims.AddRange(claimsDb);

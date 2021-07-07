@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "identityapp1": {
+      "type": "identityapp",
+      "connectionId": "",
+      "suggestion": "true",
+      "ignored": "true"
+    },
+    "storage1": {
+      "type": "storage",
+      "connectionId": "ConnectionStrings:AzureStorage",
+      "suggestion": "true",
+      "ignored": "true"
+    },
+    "mssql1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/movoesluminadbdbserver/databases/MovoesLuminaDB",
+      "type": "mssql.azure",
+      "connectionId": "DefaultConnection",
+      "secretStore": "AzureAppSettings"
+    }
+  }
+}

@@ -1,10 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
-
-namespace ServicesApi.Controllers
+﻿namespace ServicesApi.Controllers
 {
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Security.Claims;
     using System.Threading.Tasks;
 
+    using AutoMapper;
+
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Identity;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.EntityFrameworkCore;
 
     using ServicesApi.DTOs;
     using ServicesApi.Utilities;
@@ -19,11 +26,45 @@ namespace ServicesApi.Controllers
 
         private readonly ITokenGenerator tokenGenerator;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, ITokenGenerator tokenGenerator)
+        private readonly ApplicationDbContext context;
+
+        private readonly IMapper mapper;
+
+        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, ITokenGenerator tokenGenerator, ApplicationDbContext context, IMapper mapper)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.tokenGenerator = tokenGenerator;
+            this.context = context;
+            this.mapper = mapper;
+        }
+
+        [HttpGet]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdministrator")]
+        public async Task<ActionResult<List<UserDto>>> Get([FromQuery] PaginationDto paginationDto)
+        {
+            var queryable = this.context.Users.AsQueryable();
+            await this.HttpContext.AddParametersHeader(queryable);
+            var users = await queryable.OrderBy(x => x.Email).Paginate(paginationDto).ToListAsync();
+            return this.mapper.Map<List<UserDto>>(users);
+        }
+
+        [HttpPost("AddClaim")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdministrator")]
+        public async Task<ActionResult> AddClaim([FromBody] string userId)
+        {
+            var user = await this.userManager.FindByIdAsync(userId);
+            await this.userManager.AddClaimAsync(user, new Claim("role", "Administrator"));
+            return this.NoContent();
+        }
+
+        [HttpPost("RemoveClaim")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdministrator")]
+        public async Task<ActionResult> RemoveClaim([FromBody] string userId)
+        {
+            var user = await this.userManager.FindByIdAsync(userId);
+            await this.userManager.RemoveClaimAsync(user, new Claim("role", "Administrator"));
+            return this.NoContent();
         }
 
         [HttpPost("signup")]
